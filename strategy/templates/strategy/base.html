@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Check Div{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        /* Стили для десктопа */
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+        }
+
+        .dotted-underline {
+            border-bottom: 2px dotted #000;
+            padding-bottom: 3px;
+        }
+
+        .editable-field {
+            position: relative;
+            min-height: 30px;
+        }
+
+        .edit-form {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .edit-input {
+            width: 100px;
+            padding: 2px 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 0.875rem;
+        }
+
+        .display-value:hover {
+            background-color: #f0f0f0;
+            border-radius: 3px;
+            padding: 2px 5px;
+        }
+
+        /* Стили для пользователя */
+        .user-info {
+            margin-top: auto;
+            padding: 1rem 0;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #007bff;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 auto 10px;
+        }
+
+        .user-name {
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 5px;
+            word-break: break-word;
+        }
+
+        .user-email {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-align: center;
+            word-break: break-all;
+        }
+
+        .logout-btn {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        /* Адаптивные стили */
+        @media (max-width: 768px) {
+            .sidebar {
+                min-height: auto;
+                padding: 0.5rem !important;
+            }
+
+            .sidebar h4 {
+                font-size: 1rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .sidebar .nav {
+                flex-direction: row !important;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 0.25rem;
+            }
+
+            .sidebar .nav-item {
+                width: auto;
+            }
+
+            .sidebar .nav-link {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.8rem;
+                border-radius: 0.25rem;
+            }
+
+            .user-info {
+                padding: 0.5rem 0;
+                margin-top: 0.5rem;
+            }
+
+            .user-avatar {
+                width: 30px;
+                height: 30px;
+                font-size: 0.8rem;
+                margin-bottom: 5px;
+            }
+
+            .user-name {
+                font-size: 0.9rem;
+            }
+
+            .user-email {
+                font-size: 0.7rem;
+            }
+
+            .col-md-2, .col-md-10 {
+                width: 100% !important;
+            }
+
+            .row {
+                flex-direction: column;
+            }
+
+            /* Для мобильных - меню над контентом */
+            .main-container {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .mobile-menu-btn {
+                display: block !important;
+            }
+        }
+
+        /* Скрытая кнопка меню для мобильных */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        /* Стили для форм авторизации */
+        .auth-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            background-color: white;
+        }
+
+        .auth-title {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        .auth-links {
+            text-align: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .auth-error {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Кнопка меню для мобильных -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn">
+        <i class="bi bi-list"></i>
+    </button>
+
+    <div class="container-fluid main-container">
+        <div class="row">
+            <!-- Sidebar - скрывается на мобильных -->
+            <div class="col-md-2 sidebar p-3 d-flex flex-column" id="sidebar">
+                <div>
+                    <h4 class="text-center"><a href="{% url 'dashboard' %}" style="text-decoration: none; color: inherit;">Invest strategy</a></h4>
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+                                href="{% url 'dashboard' %}">
+                                <i class="bi bi-bar-chart"></i>
+                                <span class="d-none d-md-inline"> Контролируемые акции</span>
+                                <span class="d-inline d-md-none"> Контроль</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dividend_stocks' or 'dividend' in request.path %}active{% endif %}"
+                                href="{% url 'dividend_stocks' %}">
+                                <i class="bi bi-cash-stack"></i>
+                                <span class="d-none d-md-inline"> Дивидендные акции</span>
+                                <span class="d-inline d-md-none"> Дивиденды</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'candidates' or 'candidates' in request.path %}active{% endif %}"
+                               href="{% url 'candidates' %}">
+                               <i class="bi bi-search"></i>
+                               <span class="d-none d-md-inline"> Кандидаты на покупку</span>
+                               <span class="d-inline d-md-none"> Кандидаты</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'settings' or 'settings' in request.path %}active{% endif %}"
+                                href="{% url 'settings' %}">
+                                <i class="bi bi-gear"></i>
+                                <span class="d-none d-md-inline"> Настройки</span>
+                                <span class="d-inline d-md-none"> Настройки</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Блок пользователя -->
+                {% if user.is_authenticated %}
+                <div class="user-info">
+                    <div class="user-avatar">
+                        {{ user.username|first|upper }}
+                    </div>
+                    <div class="user-name">{{ user.username }}</div>
+                    <div class="user-email">{{ user.email }}</div>
+                    <form method="post" action="{% url 'logout' %}" class="logout-btn">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-box-arrow-right"></i>
+                            <span class="d-none d-md-inline"> Выйти</span>
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="bi bi-person"></i>
+                    </div>
+                    <div class="user-name">Гость</div>
+                    <div class="text-center mt-2">
+                        <a href="{% url 'login' %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-box-arrow-in-right"></i> Войти
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Main content -->
+            <div class="col-md-10">
+                <nav class="navbar navbar-light bg-light">
+                    <div class="container-fluid">
+                        <span class="navbar-brand">Strategy</span>
+                        {% if not user.is_authenticated %}
+                        <div class="d-flex">
+                            <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm me-2">
+                                <i class="bi bi-box-arrow-in-right"></i> Войти
+                            </a>
+                            <a href="{% url 'register' %}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-person-plus"></i> Регистрация
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </nav>
+
+                <div class="container-fluid mt-3">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% block content %}
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Управление меню на мобильных
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const sidebar = document.getElementById('sidebar');
+
+    if (mobileMenuBtn && sidebar) {
+        // Проверяем ширину экрана
+        function checkScreenWidth() {
+            if (window.innerWidth <= 768) {
+                // На мобильных - скрываем меню по умолчанию
+                sidebar.style.display = 'none';
+                mobileMenuBtn.style.display = 'block';
+            } else {
+                // На десктопе - показываем меню
+                sidebar.style.display = 'flex';
+                mobileMenuBtn.style.display = 'none';
+            }
+        }
+
+        // Проверяем при загрузке
+        checkScreenWidth();
+
+        // Проверяем при изменении размера окна
+        window.addEventListener('resize', checkScreenWidth);
+
+        // Обработчик клика по кнопке меню
+        mobileMenuBtn.addEventListener('click', function() {
+            if (sidebar.style.display === 'none' || sidebar.style.display === '') {
+                sidebar.style.display = 'flex';
+                this.innerHTML = '<i class="bi bi-x-lg"></i>';
+            } else {
+                sidebar.style.display = 'none';
+                this.innerHTML = '<i class="bi bi-list"></i>';
+            }
+        });
+    }
+
+    // Обработчик клика по значению
+    document.querySelectorAll('.display-value').forEach(function(display) {
+        display.addEventListener('click', function() {
+            const container = this.closest('.editable-field');
+            this.style.display = 'none';
+            container.querySelector('.edit-form').style.display = 'flex';
+            container.querySelector('.edit-input').focus();
+        });
+    });
+
+    // Сохранение
+    document.querySelectorAll('.save-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const container = this.closest('.editable-field');
+            const input = container.querySelector('.edit-input');
+            const field = container.dataset.field;
+            const itemId = container.dataset.id;
+
+            // Показываем индикатор загрузки
+            button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            button.disabled = true;
+
+            fetch(`/update-item/${itemId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    field: field,
+                    value: input.value
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    container.querySelector('.display-value').textContent = input.value;
+                    container.querySelector('.edit-form').style.display = 'none';
+                    container.querySelector('.display-value').style.display = 'inline';
+                } else {
+                    alert('Ошибка при сохранении: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка сети при сохранении');
+            })
+            .finally(() => {
+                button.innerHTML = '<i class="bi bi-check"></i>';
+                button.disabled = false;
+                location.reload();
+            });
+        });
+    });
+
+    // Отмена
+    document.querySelectorAll('.cancel-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const container = this.closest('.editable-field');
+            const originalValue = container.querySelector('.display-value').textContent;
+            container.querySelector('.edit-input').value = originalValue;
+            container.querySelector('.edit-form').style.display = 'none';
+            container.querySelector('.display-value').style.display = 'inline';
+        });
+    });
+
+    // Сохранение при нажатии Enter
+    document.querySelectorAll('.edit-input').forEach(function(input) {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.closest('.edit-form').querySelector('.save-btn').click();
+            }
+        });
+    });
+
+    // Функция для получения CSRF токена
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+</html>

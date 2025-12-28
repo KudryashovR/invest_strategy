@@ -1,0 +1,154 @@
+{% extends 'strategy/base.html' %}
+{% block title %}Кандидаты к покупке - Check Div{% endblock %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Кандидаты к покупке на период с {{ date_from }} по {{ date_to }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button id="get-candidates-btn" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-clockwise"></i> Обновить список
+            </button>
+        </div>
+    </div>
+</div>
+<div id="loading-indicator" class="d-none text-center mb-3">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Загрузка...</span>
+    </div>
+    <p class="mt-2">Обновление данных о дивидендах...</p>
+</div>
+<div class="row">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover text-center">
+            <thead>
+            <tr>
+                <td>Тикер</td>
+                <td>Цена (руб.)</td>
+                <td>Количество</td>
+                <td>Затраты (руб.)</td>
+                <td>Доля (%)</td>
+                <td>Дивиденд (руб.)</td>
+            </tr>
+            </thead>
+            <tbody>
+            {% for asset, data in assets.items %}
+            <tr class="align-middle">
+                <td><img class="rounded-circle" src="{{ data.0 }}" width="32px" height="auto"><br>{{ asset }}</td>
+                <td>{{ data.1 }}</td>
+                <td>{{ data.2 }}</td>
+                <td>{{ data.3|floatformat:2 }}</td>
+                <td>{{ data.4|floatformat:2 }}</td>
+                <td>{{ data.5|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="align-middle">
+                <td colspan="2">Итого:</td>
+                <td>{{ total_count }}</td>
+                <td>{{ total_costs|floatformat:2 }}</td>
+                <td>{{ total_share|floatformat:2 }}</td>
+                <td>{{ total_dividend|floatformat:2 }}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const updateBtn = document.getElementById('get-candidates-btn');
+    const loadingIndicator = document.getElementById('loading-indicator');
+
+    updateBtn.addEventListener('click', function() {
+        // Показываем индикатор загрузки
+        loadingIndicator.classList.remove('d-none');
+        updateBtn.disabled = true;
+        updateBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновление...';
+
+        // Отправляем запрос на сервер
+        fetch("{% url 'get_candidates' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Скрываем индикатор загрузки
+            loadingIndicator.classList.add('d-none');
+            updateBtn.disabled = false;
+            updateBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновить список';
+
+            // Показываем сообщение об успехе
+            showMessage(data.message || 'Данные успешно обновлены!', 'success');
+
+            // Если указано обновить страницу, делаем это
+            if (data.refresh) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            }
+        })
+        .catch(error => {
+            // Скрываем индикатор загрузки при ошибке
+            loadingIndicator.classList.add('d-none');
+            updateBtn.disabled = false;
+            updateBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновить список';
+
+            // Показываем сообщение об ошибке
+            showMessage('Произошла ошибка при обновлении данных', 'danger');
+            console.error('Error:', error);
+        });
+    });
+
+    // Функция для получения CSRF токена
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Функция для отображения сообщений
+    function showMessage(message, type) {
+        // Создаем элемент для сообщения
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        messageDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        // Вставляем сообщение перед таблицей
+        const tableContainer = document.querySelector('.table-responsive');
+        tableContainer.parentNode.insertBefore(messageDiv, tableContainer);
+
+        // Автоматически скрываем сообщение через 5 секунд
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.classList.remove('show');
+                setTimeout(() => {
+                    if (messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
+                    }
+                }, 150);
+            }
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

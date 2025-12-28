@@ -1,0 +1,172 @@
+{% extends 'strategy/base.html' %}
+{% block title %}Контролируемые акции - Check Div{% endblock %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Дивидендные акции за период с {{ date_from }} по {{ date_to }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button id="update-dividends-btn" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-clockwise"></i> Обновить список
+            </button>
+        </div>
+    </div>
+</div>
+<div id="loading-indicator" class="d-none text-center mb-3">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Загрузка...</span>
+    </div>
+    <p class="mt-2">Обновление данных о дивидендах...</p>
+</div>
+<div class="row">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover text-center">
+            <thead>
+            <tr>
+                <td>Тикер</td>
+                <td>Имя</td>
+                <td>Дата отсечки</td>
+                <td>Дивиденд (руб.)</td>
+                <td>Доходность (%)</td>
+                <td>Цена (руб.)</td>
+                <td>Приоритет</td>
+                <td>Максимальная доля (%)</td>
+            </tr>
+            </thead>
+            <tbody>
+            {% for asset, data in assets.items %}
+            <tr class="align-middle">
+                <td><img class="rounded-circle" src="{{ data.0 }}" width="32px" height="auto"><br>{{ asset }}</td>
+                <td>{{ data.1 }}</td>
+                <td>{{ data.2 }}</td>
+                <td>{{ data.3 }}</td>
+                <td>{{ data.4|floatformat:2 }}</td>
+                <td>{{ data.5 }}</td>
+                <td class="bg-warning">
+                    <div class="editable-field" data-id="{{ data.8 }}" data-field="asset_dividend:priority">
+                        <span class="display-value dotted-underline" style="cursor: pointer;">
+                            {% if data.6 == None %}
+                            Необходимо заполнить поле
+                            {% else %}
+                            {{ data.6 }}
+                            {% endif %}
+                        </span>
+                        <div class="edit-form" style="display: none;">
+                            <input type="text" class="edit-input" value="{% if not data.6 == None %}{{ data.6 }}{% endif %}">
+                            <button class="btn btn-sm btn-success save-btn">
+                                <i class="bi bi-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-secondary cancel-btn">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    {% if data.7 == None %}Необходимо заполнить поле{% else %}{{ data.7 }}{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const updateBtn = document.getElementById('update-dividends-btn');
+    const loadingIndicator = document.getElementById('loading-indicator');
+
+    updateBtn.addEventListener('click', function() {
+        // Показываем индикатор загрузки
+        loadingIndicator.classList.remove('d-none');
+        updateBtn.disabled = true;
+        updateBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновление...';
+
+        // Отправляем запрос на сервер
+        fetch("{% url 'update_dividends' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Скрываем индикатор загрузки
+            loadingIndicator.classList.add('d-none');
+            updateBtn.disabled = false;
+            updateBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновить список';
+
+            // Показываем сообщение об успехе
+            showMessage(data.message || 'Данные успешно обновлены!', 'success');
+
+            // Если указано обновить страницу, делаем это
+            if (data.refresh) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            }
+        })
+        .catch(error => {
+            // Скрываем индикатор загрузки при ошибке
+            loadingIndicator.classList.add('d-none');
+            updateBtn.disabled = false;
+            updateBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновить список';
+
+            // Показываем сообщение об ошибке
+            showMessage('Произошла ошибка при обновлении данных', 'danger');
+            console.error('Error:', error);
+        });
+    });
+
+    // Функция для получения CSRF токена
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Функция для отображения сообщений
+    function showMessage(message, type) {
+        // Создаем элемент для сообщения
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        messageDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        // Вставляем сообщение перед таблицей
+        const tableContainer = document.querySelector('.table-responsive');
+        tableContainer.parentNode.insertBefore(messageDiv, tableContainer);
+
+        // Автоматически скрываем сообщение через 5 секунд
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.classList.remove('show');
+                setTimeout(() => {
+                    if (messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
+                    }
+                }, 150);
+            }
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

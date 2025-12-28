@@ -1,0 +1,30 @@
+{% extends 'strategy/base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Добавление акции - Check Div{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Удаление акции</h1>
+</div>
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+        <h1>Вы действительно хотите удалить акцию {{ asset.ticker }}?</h1>
+        <h2>
+            Данные по акции:<br>
+            Тикер: {{ asset.ticker }}<br>
+            Цена покупки: {{ asset.buy_price }}<br>
+            Количество: {{ asset.buy_count }}<br>
+            Дата покупки: {{ asset.buy_date|date:"j.m.Y" }}<br>
+        </h2>
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Удалить
+            </button>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Отмена
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
